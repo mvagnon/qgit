@@ -12,6 +12,12 @@ zapdev runs on the [Bun](https://bun.sh) runtime. Install Bun first.
 bun add -g zapdev   # installs the `zapdev` command globally
 ```
 
+> If `zapdev: command not found`, Bun's global bin is not on your `PATH`. Add it (zsh):
+>
+> ```sh
+> echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+> ```
+
 Or run it once without installing:
 
 ```bash
