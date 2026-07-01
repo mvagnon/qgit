@@ -5,9 +5,9 @@ import { commitCommand } from "./commands/commit";
 
 const main = defineCommand({
   meta: {
-    name: "qgit",
+    name: "zapgit",
     version: "0.1.0",
-    description: "Quick Git — fast, precise git chores from your terminal.",
+    description: "Fast, precise git chores from your terminal.",
   },
   subCommands: {
     commit: commitCommand,

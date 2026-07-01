@@ -1,6 +1,6 @@
-# `qgit` Project Instructions
+# `zapgit` Project Instructions
 
-qgit (Quick Git) is a lightweight CLI made in TypeScript to help developers make the small repetitive git-based tasks fast, precise and even easier.
+zapgit is a lightweight CLI made in TypeScript to help developers make the small repetitive git-based tasks fast, precise and even easier.
 
 ## Dependencies
 

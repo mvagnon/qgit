@@ -1,17 +1,47 @@
 {
-  "name": "qgit",
+  "name": "zapgit",
   "version": "0.1.0",
-  "description": "Quick Git — fast, precise git chores from your terminal.",
+  "description": "Fast, precise git chores from your terminal.",
   "type": "module",
-  "private": true,
   "bin": {
-    "qgit": "./src/index.ts"
+    "zapgit": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "keywords": [
+    "git",
+    "cli",
+    "commit",
+    "conventional-commits",
+    "ollama",
+    "llm",
+    "ai",
+    "bun"
+  ],
+  "author": "Matthieu Vagnon <main.mvagnon@icloud.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mvagnon/zapgit.git"
+  },
+  "homepage": "https://github.com/mvagnon/zapgit#readme",
+  "bugs": {
+    "url": "https://github.com/mvagnon/zapgit/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
-    "qgit": "bun run src/index.ts",
+    "zapgit": "bun run src/index.ts",
+    "build": "bun build src/index.ts --target=bun --outdir dist",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "bun run build"
   },
   "dependencies": {
     "@clack/prompts": "^1.6.0",

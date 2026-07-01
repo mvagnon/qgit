@@ -1,22 +1,31 @@
-# qgit
+# zapgit
 
-**Quick Git** — a lightweight TypeScript/Bun CLI that makes small, repetitive git chores fast and precise.
+**zapgit** — a lightweight TypeScript/Bun CLI that makes small, repetitive git chores fast and precise.
+
+## Requirements
+
+zapgit runs on the [Bun](https://bun.sh) runtime. Install Bun first.
 
 ## Install
 
 ```bash
-bun install
-bun link   # exposes the `qgit` binary on your PATH
+bun add -g zapgit   # installs the `zapgit` command globally
+```
+
+Or run it once without installing:
+
+```bash
+bunx zapgit commit
 ```
 
 ## Usage
 
-### `qgit commit`
+### `zapgit commit`
 
 Stages all changes (`git add -A`), asks an Ollama model for a one-line Conventional Commits message, then lets you commit, edit or cancel, and optionally push.
 
 ```bash
-qgit commit   # `qgit` alone works too — commit is the default command
+zapgit commit   # `zapgit` alone works too — commit is the default command
 ```
 
 | Flag | Description |
@@ -36,12 +45,18 @@ Without a TTY (piped / CI), it commits automatically and only pushes when `--pus
 
 ## Development
 
+From a clone:
+
 ```bash
-bun run qgit        # run the CLI in dev
+bun install
+bun run zapgit      # run the CLI in dev
 bun run typecheck   # tsc --noEmit
 bun run lint        # eslint
 bun run test        # vitest
+bun run build       # bundle to dist/
 ```
+
+`bun link` (after `bun run build`) exposes the local `zapgit` binary on your PATH.
 
 ## Project structure
 
