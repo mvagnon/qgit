@@ -11,6 +11,7 @@ import {
   pushSetUpstream,
   stageAll,
 } from "../lib/git";
+import { errorMessage } from "../lib/errors";
 import { generateCommitMessage } from "../lib/ollama";
 
 type CommitAction = "commit" | "edit" | "cancel";
@@ -137,7 +138,3 @@ export const commitCommand = defineCommand({
     if (interactive) outro("Done.");
   },
 });
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
