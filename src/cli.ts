@@ -2,19 +2,19 @@ import { cancel, isCancel, select } from "@clack/prompts";
 import { defineCommand, runCommand, runMain, showUsage, type CommandDef } from "citty";
 
 import pkg from "../package.json";
-import { cleanupCommand } from "./commands/cleanup";
 import { commitCommand } from "./commands/commit";
+import { resetCommand } from "./commands/reset";
 
 const commands = {
   commit: commitCommand,
-  cleanup: cleanupCommand,
+  reset: resetCommand,
 };
 
 type CommandName = keyof typeof commands;
 
 const MENU: Record<CommandName, string> = {
   commit: "Stage all changes and commit with an AI-generated message",
-  cleanup: "Prune repos and delete stale local branches",
+  reset: "Switch child repos to a branch and delete the other branches and worktrees",
 };
 
 const menuOptions = (Object.keys(MENU) as CommandName[]).map((value) => ({

@@ -3,7 +3,9 @@ import { join } from "node:path";
 
 import { x } from "tinyexec";
 
+import type { Worktree } from "../types/worktree";
 import { parseBranches, parseDefaultBranch } from "./branches";
+import { parseWorktrees } from "./worktrees";
 
 const UPSTREAM_REF = "@{upstream}";
 const BRANCH_FORMAT = "%(refname:short)";
@@ -50,27 +52,28 @@ export async function pushSetUpstream(branch: string): Promise<void> {
   await git(["push", "-u", "origin", branch]);
 }
 
-export async function findGitRepos(start: string): Promise<string[]> {
-  const repos: string[] = [];
-  await collectRepos(start, repos);
-  return repos.sort();
+// Direct child repos only (level 1, non-recursive): each subdirectory holding a
+// `.git` entry. The parent itself is never included.
+export async function findChildRepos(parent: string): Promise<string[]> {
+  const entries = await readdir(parent, { withFileTypes: true }).catch(() => null);
+  if (!entries) return [];
+
+  const dirs = entries.filter((entry) => entry.isDirectory() && entry.name !== "node_modules");
+  const repos = await Promise.all(
+    dirs.map(async (entry) => {
+      const dir = join(parent, entry.name);
+      return (await isGitRepo(dir)) ? dir : null;
+    }),
+  );
+
+  return repos.filter((dir): dir is string => dir !== null).sort();
 }
 
-// Prune at each repo boundary (a `.git` entry): we never descend into a repo, so
-// submodules and a repo's node_modules are skipped, unlike the original `find` walk.
-async function collectRepos(dir: string, repos: string[]): Promise<void> {
+// A main working tree has `.git` as a directory; a linked worktree has it as a
+// file, so requiring a directory excludes worktrees that live under the parent.
+async function isGitRepo(dir: string): Promise<boolean> {
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => null);
-  if (!entries) return;
-
-  if (entries.some((entry) => entry.name === ".git")) {
-    repos.push(dir);
-    return;
-  }
-
-  const subdirs = entries.filter(
-    (entry) => entry.isDirectory() && entry.name !== "node_modules",
-  );
-  await Promise.all(subdirs.map((entry) => collectRepos(join(dir, entry.name), repos)));
+  return entries?.some((entry) => entry.name === ".git" && entry.isDirectory()) ?? false;
 }
 
 export async function fetchPrune(repo: string): Promise<void> {
@@ -92,6 +95,24 @@ export async function currentBranchAt(repo: string): Promise<string | null> {
 
 export async function localBranches(repo: string): Promise<string[]> {
   return parseBranches(await git(["branch", `--format=${BRANCH_FORMAT}`], repo));
+}
+
+export async function branchExists(repo: string, branch: string): Promise<boolean> {
+  const local = await tryGit(["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], repo);
+  if (local !== null) return true;
+  const remote = await tryGit(
+    ["show-ref", "--verify", "--quiet", `refs/remotes/origin/${branch}`],
+    repo,
+  );
+  return remote !== null;
+}
+
+export async function listWorktrees(repo: string): Promise<Worktree[]> {
+  return parseWorktrees(await git(["worktree", "list", "--porcelain"], repo));
+}
+
+export async function removeWorktree(repo: string, path: string): Promise<void> {
+  await git(["worktree", "remove", "--force", path], repo);
 }
 
 export async function switchBranch(repo: string, branch: string): Promise<void> {
