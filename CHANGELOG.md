@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/mvagnon/zapdev/compare/v0.5.0...v0.6.0) (2026-07-19)
+
+
+### Features
+
+* **ci:** migrate from Bun to Node.js/npm ([086b2dd](https://github.com/mvagnon/zapdev/commit/086b2dd981be030c7b2f239791fb5d7684244b3d))
+
 ## [0.5.0](https://github.com/mvagnon/zapdev/compare/v0.4.0...v0.5.0) (2026-07-02)
 
 
