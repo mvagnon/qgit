@@ -6,20 +6,22 @@ zapdev is a lightweight CLI made in TypeScript to help developers make the small
 
 - `@clack/prompts` for pretty TUI prompts
 - `Citty` for great CLI experience
-- `Ollama` for local/cloud LLM calls
+- `tinyexec` to spawn git processes (direct spawn, no shell)
+- `esbuild` to bundle everything (deps included) into a single `dist/cli.js` at publish time
 - `ESLint` for linting
 - `Vitest` for unit testing
 
-And Bun as a runtime.
+And Node.js (>= 20) as a runtime, npm as package manager. Ollama is called over plain `fetch` (`src/lib/ollama.ts`) — no SDK. The published package has zero runtime `dependencies`: everything is inlined in the bundle.
 
 ## Architecture
 
 `src/` layout — respect these boundaries when adding code:
 
-- `src/index.ts` — CLI entry (Citty); registers subcommands, defaults to `commit`.
+- `src/index.ts` — bin launcher; enables the V8 compile cache, then dynamically imports `cli.js`.
+- `src/cli.ts` — CLI entry (Citty); registers subcommands, defaults to `commit`.
 - `src/commands/` — one file per command. UI and orchestration only (prompts, spinners, control flow); delegate real work to `lib/`.
 - `src/lib/` — the logic. Pure, testable functions (validation, transformation, parsing) that are unit-tested, and side effects (`git`, `ollama`) isolated in their own modules; shared helpers (`errors`).
-- `src/prompts/` — LLM prompts as `.md` files, imported as text via `with { type: "text" }` and inlined into the bundle at build time.
+- `src/prompts/` — LLM prompts as `.md` files, imported as text (esbuild `.md` text loader) and inlined into the bundle at build time.
 - `src/types/` — shared type declarations, one file per domain (`config.ts`, `commit.ts`), plus ambient module declarations (`markdown.d.ts`).
 
 Conventions:

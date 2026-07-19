@@ -1,28 +1,24 @@
 # zapdev
 
-**zapdev** — a lightweight TypeScript/Bun CLI that makes small, repetitive git chores fast and precise.
+**zapdev** — a lightweight TypeScript CLI that makes small, repetitive git chores fast and precise.
 
 ## Requirements
 
-zapdev runs on the [Bun](https://bun.sh) runtime. Install Bun first.
+Node.js >= 20 and git.
 
 ## Install
 
 ```bash
-bun add -g zapdev   # installs the `zapdev` command globally
+npm install -g zapdev   # installs the `zapdev` command globally
 ```
-
-> If `zapdev: command not found`, Bun's global bin is not on your `PATH`. Add it (zsh):
->
-> ```sh
-> echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
-> ```
 
 Or run it once without installing:
 
 ```bash
-bunx zapdev commit
+npx zapdev commit
 ```
+
+> For daily use, prefer the global install: `npx` adds resolution overhead on every run.
 
 ## Usage
 
@@ -78,20 +74,21 @@ Deletion uses `git branch -D` (force). Without a TTY (or with `--yes`), every no
 From a clone:
 
 ```bash
-bun install
-bun run zapdev      # run the CLI in dev
-bun run typecheck   # tsc --noEmit
-bun run lint        # eslint
-bun run test        # vitest
-bun run build       # bundle to dist/
+npm install
+npm run zapdev      # build then run the CLI in dev
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+npm run test        # vitest
+npm run build       # bundle to dist/ (esbuild)
 ```
 
-`bun link` (after `bun run build`) exposes the local `zapdev` binary on your PATH.
+`npm link` (after `npm run build`) exposes the local `zapdev` binary on your PATH.
 
 ## Project structure
 
-- `src/index.ts` — CLI entry (Citty); registers subcommands, defaults to `commit`.
+- `src/index.ts` — bin launcher; enables the V8 compile cache, then loads `cli.js`.
+- `src/cli.ts` — CLI entry (Citty); registers subcommands, defaults to `commit`.
 - `src/commands/` — one file per command.
 - `src/lib/` — pure logic (`config`, `commit-message`, `branches`, unit-tested) and side effects (`git`, `ollama`); shared helpers (`errors`).
-- `src/prompts/` — LLM prompts as `.md` files, imported as text (`with { type: "text" }`) and inlined into the bundle at build time.
+- `src/prompts/` — LLM prompts as `.md` files, imported as text (esbuild `.md` text loader) and inlined into the bundle at build time.
 - `src/types/` — shared type declarations (one file per domain) and ambient module declarations.

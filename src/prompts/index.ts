@@ -1,3 +1,3 @@
-import commitMessagePrompt from "./commit-message.md" with { type: "text" };
+import commitMessagePrompt from "./commit-message.md";
 
 export const COMMIT_SYSTEM_PROMPT = commitMessagePrompt.trim();

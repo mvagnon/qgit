@@ -99,13 +99,11 @@ async function cleanupRepo(
     log.warn(`  Fetch failed, continuing: ${errorMessage(error)}`);
   }
 
-  const base = await defaultBranch(repo);
+  const [base, current] = await Promise.all([defaultBranch(repo), currentBranchAt(repo)]);
   if (!base) {
     log.warn("  Skipped: no origin/HEAD.");
     return false;
   }
-
-  const current = await currentBranchAt(repo);
 
   let endBranch = base;
   if (current && current !== base) {

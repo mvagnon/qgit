@@ -90,9 +90,7 @@ export const commitCommand = defineCommand({
       message = await generateCommitMessage(diff, config, type);
     } catch (error) {
       loader?.error("Generation failed");
-      log.error(
-        `Generation failed (machine unreachable?): ${errorMessage(error)}`,
-      );
+      log.error(`Generation failed: ${errorMessage(error)}`);
       process.exitCode = 1;
       return;
     }
@@ -159,8 +157,9 @@ export const commitCommand = defineCommand({
       const pushLoader = interactive ? spinner() : undefined;
       pushLoader?.start("Pushing");
       try {
-        if (await hasUpstream()) await push();
-        else await pushSetUpstream(await currentBranch());
+        const [upstream, branch] = await Promise.all([hasUpstream(), currentBranch()]);
+        if (upstream) await push();
+        else await pushSetUpstream(branch);
         pushLoader?.stop("✓ Pushed");
       } catch (error) {
         pushLoader?.error("Push failed");

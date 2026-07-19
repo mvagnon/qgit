@@ -23,4 +23,16 @@ describe("resolveConfig", () => {
       model: "flag-model",
     });
   });
+
+  it("normalizes the Ollama URL", () => {
+    expect(resolveConfig({ OLLAMA_URL: "localhost:11434" }).ollamaUrl).toBe(
+      "http://localhost:11434",
+    );
+    expect(resolveConfig({ OLLAMA_URL: "https://host:1234/" }).ollamaUrl).toBe(
+      "https://host:1234",
+    );
+    expect(resolveConfig({ OLLAMA_URL: " http://host:1234 " }).ollamaUrl).toBe(
+      "http://host:1234",
+    );
+  });
 });

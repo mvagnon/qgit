@@ -8,7 +8,13 @@ export function resolveConfig(
   overrides: Partial<ZapdevConfig> = {},
 ): ZapdevConfig {
   return {
-    ollamaUrl: overrides.ollamaUrl ?? env.OLLAMA_URL ?? DEFAULT_OLLAMA_URL,
+    ollamaUrl: normalizeBaseUrl(overrides.ollamaUrl ?? env.OLLAMA_URL ?? DEFAULT_OLLAMA_URL),
     model: overrides.model ?? env.OLLAMA_MODEL ?? DEFAULT_MODEL,
   };
+}
+
+// The Ollama SDK accepted scheme-less hosts (e.g. "localhost:11434"); keep that contract.
+function normalizeBaseUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  return /^https?:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
 }
