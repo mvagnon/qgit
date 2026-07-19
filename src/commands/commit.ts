@@ -14,10 +14,13 @@ import {
 import { normalizeCommitType } from "../lib/commit-message";
 import { resolveConfig } from "../lib/config";
 import {
+  behindCount,
   commit as gitCommit,
   currentBranch,
+  fetchRemote,
   getStagedDiff,
   hasUpstream,
+  pullRebase,
   push,
   pushSetUpstream,
   stageAll,
@@ -44,6 +47,10 @@ export const commitCommand = defineCommand({
       type: "string",
       alias: "t",
       description: `Force the Conventional Commits type (${COMMIT_TYPES.join(", ")}).`,
+    },
+    pull: {
+      type: "boolean",
+      description: "Rebase onto upstream (git pull --rebase) after committing, before pushing.",
     },
     push: {
       type: "boolean",
@@ -143,6 +150,11 @@ export const commitCommand = defineCommand({
     await gitCommit(finalMessage);
     if (interactive) log.success(`Committed: ${finalMessage}`);
 
+    if (args.pull && !(await rebaseOnUpstream(interactive))) {
+      process.exitCode = 1;
+      return;
+    }
+
     let shouldPush = Boolean(args.push);
     if (!shouldPush && interactive && !args.yes) {
       const answer = await confirm({ message: "Push?", initialValue: false });
@@ -154,16 +166,8 @@ export const commitCommand = defineCommand({
     }
 
     if (shouldPush) {
-      const pushLoader = interactive ? spinner() : undefined;
-      pushLoader?.start("Pushing");
-      try {
-        const [upstream, branch] = await Promise.all([hasUpstream(), currentBranch()]);
-        if (upstream) await push();
-        else await pushSetUpstream(branch);
-        pushLoader?.stop("✓ Pushed");
-      } catch (error) {
-        pushLoader?.error("Push failed");
-        log.error(`Push failed: ${errorMessage(error)}`);
+      const pushed = await pushOptimistic(interactive, Boolean(args.yes));
+      if (!pushed) {
         process.exitCode = 1;
         return;
       }
@@ -172,3 +176,95 @@ export const commitCommand = defineCommand({
     if (interactive) outro("Done.");
   },
 });
+
+// Rebases the current branch onto its upstream. Returns false on a rebase
+// conflict so the caller stops before pushing.
+async function rebaseOnUpstream(interactive: boolean): Promise<boolean> {
+  if (!(await hasUpstream())) {
+    log.info("No upstream to pull from; skipping --pull.");
+    return true;
+  }
+
+  const loader = interactive ? spinner() : undefined;
+  loader?.start("Pulling --rebase");
+  try {
+    await pullRebase();
+    loader?.stop("✓ Rebased on upstream");
+    return true;
+  } catch (error) {
+    loader?.error("Rebase failed");
+    log.error(`Rebase failed (resolve conflicts, then push): ${errorMessage(error)}`);
+    return false;
+  }
+}
+
+// Pushes without a preliminary fetch, so the common case stays a single round-trip.
+// On failure, diagnoses "behind upstream" by fetching and comparing (only on this
+// rare path) rather than parsing stderr. A behind rejection is recovered
+// interactively (rebase + retry once); non-interactively it points to --pull.
+async function pushOptimistic(interactive: boolean, assumeYes: boolean): Promise<boolean> {
+  const [upstream, branch] = await Promise.all([hasUpstream(), currentBranch()]);
+  const doPush = () => (upstream ? push() : pushSetUpstream(branch));
+
+  const first = await tryPush(interactive, doPush);
+  if (first.ok) return true;
+
+  if (upstream && (await isBehind(interactive))) {
+    if (assumeYes || !interactive) {
+      log.error("Behind upstream — re-run with --pull to rebase and push.");
+      return false;
+    }
+
+    const answer = await confirm({ message: "Pull --rebase and retry push?", initialValue: true });
+    if (isCancel(answer) || !answer) {
+      log.info("Not pushed (still behind).");
+      return true;
+    }
+
+    if (!(await rebaseOnUpstream(interactive))) return false;
+
+    const retry = await tryPush(interactive, doPush);
+    if (retry.ok) return true;
+    log.error(`Push failed: ${errorMessage(retry.error)}`);
+    return false;
+  }
+
+  log.error(`Push failed: ${errorMessage(first.error)}`);
+  return false;
+}
+
+type PushResult = { ok: true } | { ok: false; error: unknown };
+
+async function tryPush(interactive: boolean, doPush: () => Promise<void>): Promise<PushResult> {
+  const loader = interactive ? spinner() : undefined;
+  loader?.start("Pushing");
+  try {
+    await doPush();
+    loader?.stop("✓ Pushed");
+    return { ok: true };
+  } catch (error) {
+    loader?.error("Push failed");
+    return { ok: false, error };
+  }
+}
+
+// Fetches, then checks whether the branch trails its upstream. A failed fetch
+// (offline, auth) is treated as "not behind" so the original push error surfaces.
+async function isBehind(interactive: boolean): Promise<boolean> {
+  const loader = interactive ? spinner() : undefined;
+  loader?.start("Checking upstream");
+  try {
+    await fetchRemote();
+    const behind = await behindCount();
+    loader?.stop(
+      behind > 0
+        ? `Behind upstream by ${behind} commit${behind > 1 ? "s" : ""}`
+        : "Up to date with upstream",
+    );
+    return behind > 0;
+  } catch (error) {
+    loader?.error("Could not check upstream");
+    log.warn(`Could not check upstream: ${errorMessage(error)}`);
+    return false;
+  }
+}

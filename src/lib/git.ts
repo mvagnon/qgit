@@ -52,6 +52,21 @@ export async function pushSetUpstream(branch: string): Promise<void> {
   await git(["push", "-u", "origin", branch]);
 }
 
+export async function pullRebase(): Promise<void> {
+  await git(["pull", "--rebase"]);
+}
+
+export async function fetchRemote(): Promise<void> {
+  await git(["fetch"]);
+}
+
+// Commits on the upstream not yet in HEAD. Zero when there is no upstream.
+// Reflects the last fetched state, so fetch first for an up-to-date count.
+export async function behindCount(): Promise<number> {
+  const out = await tryGit(["rev-list", "--count", `HEAD..${UPSTREAM_REF}`]);
+  return out === null ? 0 : Number(out.trim()) || 0;
+}
+
 // If `path` is itself a repo, reset operates on it alone; otherwise its direct
 // child repos (level 1, non-recursive). Never recurses into a repo.
 export async function findRepos(path: string): Promise<string[]> {

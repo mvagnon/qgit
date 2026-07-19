@@ -36,12 +36,15 @@ zapdev commit
 | --- | --- |
 | `-m, --model <model>` | Override the Ollama model |
 | `-t, --type <type>` | Force the Conventional Commits type (`feat`, `fix`, `chore`, …) |
+| `--pull` | Rebase onto upstream (`git pull --rebase`) after committing, before pushing |
 | `-p, --push` | Push after committing without asking |
 | `-y, --yes` | Skip prompts and commit directly |
 
 ```bash
 zapdev commit -t feat      # force the type; the model still writes scope + description
 ```
+
+Pushing is optimistic — no preliminary fetch, so the common case stays a single round-trip. If the push is rejected because the branch is behind its upstream, in a TTY it offers to `git pull --rebase` and retry; non-interactively (`--yes` / piped) it stops and asks you to re-run with `--pull`. Pass `--pull` to rebase onto upstream right after the commit (a rebase conflict stops before pushing). `--yes` only silences prompts; it never rebases on its own.
 
 Without a TTY (piped / CI), it commits automatically and only pushes when `--push` is set.
 
