@@ -48,10 +48,6 @@ export const commitCommand = defineCommand({
       alias: "t",
       description: `Force the Conventional Commits type (${COMMIT_TYPES.join(", ")}).`,
     },
-    pull: {
-      type: "boolean",
-      description: "Rebase onto upstream (git pull --rebase) after committing, before pushing.",
-    },
     push: {
       type: "boolean",
       alias: "p",
@@ -150,11 +146,6 @@ export const commitCommand = defineCommand({
     await gitCommit(finalMessage);
     if (interactive) log.success(`Committed: ${finalMessage}`);
 
-    if (args.pull && !(await rebaseOnUpstream(interactive))) {
-      process.exitCode = 1;
-      return;
-    }
-
     let shouldPush = Boolean(args.push);
     if (!shouldPush && interactive && !args.yes) {
       const answer = await confirm({ message: "Push?", initialValue: false });
@@ -166,7 +157,7 @@ export const commitCommand = defineCommand({
     }
 
     if (shouldPush) {
-      const pushed = await pushOptimistic(interactive, Boolean(args.yes));
+      const pushed = await pushOptimistic(interactive);
       if (!pushed) {
         process.exitCode = 1;
         return;
@@ -180,11 +171,6 @@ export const commitCommand = defineCommand({
 // Rebases the current branch onto its upstream. Returns false on a rebase
 // conflict so the caller stops before pushing.
 async function rebaseOnUpstream(interactive: boolean): Promise<boolean> {
-  if (!(await hasUpstream())) {
-    log.info("No upstream to pull from; skipping --pull.");
-    return true;
-  }
-
   const loader = interactive ? spinner() : undefined;
   loader?.start("Pulling --rebase");
   try {
@@ -201,8 +187,8 @@ async function rebaseOnUpstream(interactive: boolean): Promise<boolean> {
 // Pushes without a preliminary fetch, so the common case stays a single round-trip.
 // On failure, diagnoses "behind upstream" by fetching and comparing (only on this
 // rare path) rather than parsing stderr. A behind rejection is recovered
-// interactively (rebase + retry once); non-interactively it points to --pull.
-async function pushOptimistic(interactive: boolean, assumeYes: boolean): Promise<boolean> {
+// automatically: rebase onto upstream, then retry the push once.
+async function pushOptimistic(interactive: boolean): Promise<boolean> {
   const [upstream, branch] = await Promise.all([hasUpstream(), currentBranch()]);
   const doPush = () => (upstream ? push() : pushSetUpstream(branch));
 
@@ -210,17 +196,6 @@ async function pushOptimistic(interactive: boolean, assumeYes: boolean): Promise
   if (first.ok) return true;
 
   if (upstream && (await isBehind(interactive))) {
-    if (assumeYes || !interactive) {
-      log.error("Behind upstream — re-run with --pull to rebase and push.");
-      return false;
-    }
-
-    const answer = await confirm({ message: "Pull --rebase and retry push?", initialValue: true });
-    if (isCancel(answer) || !answer) {
-      log.info("Not pushed (still behind).");
-      return true;
-    }
-
     if (!(await rebaseOnUpstream(interactive))) return false;
 
     const retry = await tryPush(interactive, doPush);
